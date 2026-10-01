@@ -45,4 +45,8 @@ enum custom_keycodes {
 #define MODS_ALT    (MOD_BIT(KC_LALT)|MOD_BIT(KC_RALT))
 #define MODS_GUI    (MOD_BIT(KC_LGUI)|MOD_BIT(KC_RGUI))
 
+// readable aliases
+#define THUMB_SPACE_LEFT  LSFT_T(KC_SPC)
+#define THUMB_SPACE_RIGHT RSFT_T(KC_SPC)
+
 #endif

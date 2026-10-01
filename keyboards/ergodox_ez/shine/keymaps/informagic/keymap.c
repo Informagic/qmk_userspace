@@ -1,5 +1,19 @@
 #include "keymap.h"
 
+static bool process_long_thumb_enter(uint16_t keycode, keyrecord_t *record);
+static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record);
+
+#define THUMB_REPEAT_TERM 200
+
+static uint16_t left_thumb_last_tap  = 0;
+static uint16_t right_thumb_last_tap = 0;
+
+static bool left_thumb_repeat_armed  = false;
+static bool right_thumb_repeat_armed = false;
+
+static bool left_thumb_repeating  = false;
+static bool right_thumb_repeating = false;
+
 /* TODO: Use US International keymap in order to prevent some of the more common letters to be sent as Unicode */
 
 const uint32_t PROGMEM unicode_map[] = {
@@ -56,11 +70,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_ESCAPE,              NEO2_1,         NEO2_2,         NEO2_3,         NEO2_4,         NEO2_5,         NEO2_ACUTE_CEDILLA,                             NEO2_GRAVE_TILDE,   NEO2_6,         NEO2_7,         NEO2_8,         NEO2_9,         NEO2_0,         NEO2_MINUS,
     NEO2_CIRCUMFLEX_CARON,  KC_X,           KC_V,           KC_L,           KC_C,           KC_W,           KC_TRANSPARENT,                                 KC_TRANSPARENT,     KC_K,           KC_H,           KC_G,           KC_F,           KC_Q,           NEO2_SS,
     KC_TAB,                 KC_U,           KC_I,           KC_A,           KC_E,           KC_O,                                                                               KC_S,           KC_N,           KC_R,           KC_T,           KC_D,           KC_Y,
-    MO(1),                  NEO2_UE,        NEO2_OE,        NEO2_AE,        KC_P,           KC_Z,           KC_HYPR,                                        KC_MEH,             KC_B,           KC_M,           NEO2_COMMA,     NEO2_DOT,       KC_J,           MO(1),
+    MO(NEO2_LAYER_3),                  NEO2_UE,        NEO2_OE,        NEO2_AE,        KC_P,           KC_Z,           KC_HYPR,                                        KC_MEH,             KC_B,           KC_M,           NEO2_COMMA,     NEO2_DOT,       KC_J,           MO(NEO2_LAYER_3),
     KC_LEFT_GUI,            KC_TRANSPARENT, KC_TRANSPARENT, KC_UP,          KC_DOWN,                                                                                                            KC_LEFT,        KC_RIGHT,       KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
                                                                                                     KC_TRANSPARENT,             DISCO_TOGGLE,   LAG(KC_EQUAL), LAG(KC_MINUS),
                                                                                                                                 KC_HOME,        KC_PAGE_UP,
-                                                                            MT(MOD_LSFT, KC_SPACE), MT(MOD_LCTL, KC_DELETE),    KC_END,         KC_PGDN,       MT(MOD_RALT, KC_BSPC), MT(MOD_RSFT, KC_SPACE)
+                                                                            THUMB_SPACE_LEFT, MT(MOD_LCTL, KC_DELETE),    KC_END,         KC_PGDN,       MT(MOD_RALT, KC_BSPC), THUMB_SPACE_RIGHT
   ),
   [NEO2_LAYER_3] = LAYOUT_ergodox_pretty(
     KC_TRANSPARENT,      KC_F1,          KC_F2,          KC_F3,          KC_F4,          KC_F5,          KC_F6,                                          KC_F7,          KC_F8,          KC_F9,          KC_F10,         KC_F11,         KC_F12,         KC_TRANSPARENT,
@@ -104,13 +118,75 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
 };
 
-const uint16_t PROGMEM combo0[] = { MT(MOD_LSFT, KC_SPACE), MT(MOD_RSFT, KC_SPACE), COMBO_END};
+const uint16_t PROGMEM combo0[] = {
+    THUMB_SPACE_LEFT,
+    THUMB_SPACE_RIGHT,
+    COMBO_END
+};
 
 combo_t key_combos[COMBO_COUNT] = {
     COMBO(combo0, KC_ENTER),
 };
 
+bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case THUMB_SPACE_LEFT:
+            if (record->event.pressed) {
+                if (left_thumb_repeat_armed &&
+                    timer_elapsed(left_thumb_last_tap) <= THUMB_REPEAT_TERM) {
+                    left_thumb_repeat_armed = false;
+                    left_thumb_repeating    = true;
+
+                    register_code(KC_SPC);
+                    return false;
+                }
+
+                left_thumb_repeat_armed = false;
+            } else if (left_thumb_repeating) {
+                unregister_code(KC_SPC);
+
+                left_thumb_repeating   = false;
+                left_thumb_last_tap    = timer_read();
+                left_thumb_repeat_armed = true;
+
+                return false;
+            }
+            break;
+
+        case THUMB_SPACE_RIGHT:
+            if (record->event.pressed) {
+                if (right_thumb_repeat_armed &&
+                    timer_elapsed(right_thumb_last_tap) <= THUMB_REPEAT_TERM) {
+                    right_thumb_repeat_armed = false;
+                    right_thumb_repeating    = true;
+
+                    register_code(KC_SPC);
+                    return false;
+                }
+
+                right_thumb_repeat_armed = false;
+            } else if (right_thumb_repeating) {
+                unregister_code(KC_SPC);
+
+                right_thumb_repeating    = false;
+                right_thumb_last_tap     = timer_read();
+                right_thumb_repeat_armed = true;
+
+                return false;
+            }
+            break;
+    }
+
+    return true;
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  if (process_long_thumb_enter(keycode, record)) {
+    return false;
+  }
+
+  arm_thumb_space_repeat(keycode, record);
+
   switch (keycode) {
 
     case RGB_SLD:
@@ -274,8 +350,8 @@ bool process_record_user_shifted(uint16_t keycode, keyrecord_t *record) {
   }
 }
 
-uint8_t layer_state_set_user(uint8_t state) {
-    uint8_t layer = biton(state);
+layer_state_t layer_state_set_user(layer_state_t state) {
+    uint8_t layer = get_highest_layer(state);
     ergodox_board_led_off();
     ergodox_right_led_1_off();
     ergodox_right_led_2_off();
@@ -327,4 +403,59 @@ void matrix_init_user(void) {
 
 void matrix_scan_user(void) {
     decrease_brightness();
+}
+
+static bool process_long_thumb_enter(uint16_t keycode, keyrecord_t *record) {
+    if (!record->event.pressed || record->tap.count == 0) {
+        return false;
+    }
+
+    uint8_t opposite_shift = 0;
+
+    switch (keycode) {
+        case THUMB_SPACE_LEFT:
+            opposite_shift = MOD_BIT(KC_RSFT);
+            break;
+
+        case THUMB_SPACE_RIGHT:
+            opposite_shift = MOD_BIT(KC_LSFT);
+            break;
+
+        default:
+            return false;
+    }
+
+    uint8_t saved_mods = get_mods();
+
+    if (!(saved_mods & opposite_shift)) {
+        return false;
+    }
+
+    del_mods(MOD_MASK_SHIFT);
+    send_keyboard_report();
+
+    tap_code(KC_ENT);
+
+    set_mods(saved_mods);
+    send_keyboard_report();
+
+    return true;
+}
+
+static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record) {
+    if (!record->event.pressed || record->tap.count == 0) {
+        return;
+    }
+
+    switch (keycode) {
+        case THUMB_SPACE_LEFT:
+            left_thumb_last_tap     = timer_read();
+            left_thumb_repeat_armed = true;
+            break;
+
+        case THUMB_SPACE_RIGHT:
+            right_thumb_last_tap     = timer_read();
+            right_thumb_repeat_armed = true;
+            break;
+    }
 }
