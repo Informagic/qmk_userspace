@@ -136,6 +136,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         #endif
       }
       return false;
+    case DISCO_TOGGLE:
+      if (record->event.pressed) {
+          disco_mode_enabled = !disco_mode_enabled;
+
+          if (disco_mode_enabled) {
+              rgblight_enable_noeeprom();
+              rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
+          } else {
+              rgblight_reload_from_eeprom();
+          }
+      }
+    return false;
   }
 
   return process_record_user_shifted(keycode, record);

@@ -3,9 +3,6 @@
 
 #include QMK_KEYBOARD_H
 
-rgblight_config_t rgblight_config;
-bool disable_layer_color;
-
 struct disco_state {
   uint8_t led_hue;
   uint8_t animation_progress; // 255 at beginning of animation, decrements down to 0
@@ -15,8 +12,8 @@ struct disco_state {
 
 bool disco_mode_enabled;
 uint16_t animation_timer;
-struct disco_state disco_left;
-struct disco_state disco_right;
+extern struct disco_state disco_left;
+extern struct disco_state disco_right;
 
 // Absolute value of (a - b) for unsigned values
 #define DIST(a, b) ((a) > (b) ? (a) - (b) : (b) - (a))

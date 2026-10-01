@@ -1,8 +1,10 @@
 #include "disco.h"
+#include <stdlib.h>
 
-rgblight_config_t rgblight_config;
-bool disable_layer_color = 1;
-bool disco_mode_enabled = 0;
+bool disco_mode_enabled = false;
+uint16_t animation_timer = 0;
+struct disco_state disco_left  = {0};
+struct disco_state disco_right = {0};
 
 void check_disco_mode(uint16_t keycode, keyrecord_t *record) {
   if (disco_mode_enabled) {
@@ -13,12 +15,12 @@ void check_disco_mode(uint16_t keycode, keyrecord_t *record) {
         disco_left.animation_center_index = 30 - (record->event.key.row * 2 + 2);
         disco_left.num_keys_held_down++;
 
-        for (uint8_t led_index = (uint8_t)RGBLED_NUM / 2; led_index < (uint8_t)RGBLED_NUM; led_index++) {
-          sethsv(
+        for (uint8_t led_index = (uint8_t)RGBLIGHT_LED_COUNT / 2; led_index < (uint8_t)RGBLIGHT_LED_COUNT; led_index++) {
+          rgblight_sethsv_at(
             disco_left.led_hue,
             255,
             DISCO_LED_VALUE(disco_left.animation_progress, led_index, disco_left.animation_center_index),
-            &led[led_index]
+            led_index
           );
         }
       } else {
@@ -27,17 +29,16 @@ void check_disco_mode(uint16_t keycode, keyrecord_t *record) {
         disco_right.animation_center_index = (13 - record->event.key.row) * 2 + 1;
         disco_right.num_keys_held_down++;
 
-        for (uint8_t led_index = 0; led_index < (uint8_t)RGBLED_NUM / 2; led_index++) {
-          sethsv(
+        for (uint8_t led_index = 0; led_index < (uint8_t)RGBLIGHT_LED_COUNT / 2; led_index++) {
+          rgblight_sethsv_at(
             disco_right.led_hue,
             255,
             DISCO_LED_VALUE(disco_right.animation_progress, led_index, disco_right.animation_center_index),
-            &led[led_index]
+            led_index
           );
         }
       }
 
-      rgblight_set();
     } else {
       if (record->event.key.row < 7) {
         if (disco_left.num_keys_held_down > 0) {
@@ -63,12 +64,12 @@ void decrease_brightness(void) {
     if (disco_left.num_keys_held_down == 0 && disco_left.animation_progress > 0) {
       disco_left.animation_progress -= 5;
 
-      for (uint8_t led_index = (uint8_t)RGBLED_NUM / 2; led_index < (uint8_t)RGBLED_NUM; led_index++) {
-        sethsv(
+      for (uint8_t led_index = (uint8_t)RGBLIGHT_LED_COUNT / 2; led_index < (uint8_t)RGBLIGHT_LED_COUNT; led_index++) {
+        rgblight_sethsv_at(
           disco_left.led_hue,
           255,
           DISCO_LED_VALUE(disco_left.animation_progress, led_index, disco_left.animation_center_index),
-          &led[led_index]
+          led_index
         );
       }
     }
@@ -76,16 +77,14 @@ void decrease_brightness(void) {
     if (disco_right.num_keys_held_down == 0 && disco_right.animation_progress > 0) {
       disco_right.animation_progress -= 5;
 
-      for (uint8_t led_index = 0; led_index < (uint8_t)RGBLED_NUM / 2; led_index++) {
-        sethsv(
+      for (uint8_t led_index = 0; led_index < (uint8_t)RGBLIGHT_LED_COUNT / 2; led_index++) {
+        rgblight_sethsv_at(
           disco_right.led_hue,
           255,
           DISCO_LED_VALUE(disco_right.animation_progress, led_index, disco_right.animation_center_index),
-          &led[led_index]
+          led_index
         );
       }
     }
-
-    rgblight_set();
   }
 }
