@@ -1,9 +1,26 @@
 #include "keymap.h"
 
+#ifdef CONSOLE_ENABLE
+#include "print.h"
+
+static const char *layer_name(uint8_t layer) {
+    switch (layer) {
+        case NEO2_LAYER_1_AND_2: return "BASE";
+        case NEO2_LAYER_3:       return "NEO3";
+        case NEO2_LAYER_4:       return "NEO4";
+        case NEO2_LAYER_5:       return "NEO5";
+        case NEO2_LAYER_6:       return "NEO6";
+        case DE_NORMAL:          return "DE";
+        case FKEYS:              return "FN";
+        default:                 return "UNKNOWN";
+    }
+}
+#endif
+
 static bool process_long_thumb_enter(uint16_t keycode, keyrecord_t *record);
 static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record);
 
-#define THUMB_REPEAT_TERM 200
+#define Ä 200
 
 static uint16_t left_thumb_last_tap  = 0;
 static uint16_t right_thumb_last_tap = 0;
@@ -386,6 +403,11 @@ layer_state_t layer_state_set_user(layer_state_t state) {
       default:
         break;
     }
+
+#ifdef CONSOLE_ENABLE
+    uprintf("LAYER:%s\n", layer_name(get_highest_layer(state)));
+#endif
+
     return state;
 };
 
