@@ -10,7 +10,7 @@ static const char *layer_name(uint8_t layer) {
         case NEO2_LAYER_4:       return "NEO4";
         case NEO2_LAYER_5:       return "NEO5";
         case NEO2_LAYER_6:       return "NEO6";
-        case DE_NORMAL:          return "DE";
+        case DE_NORMAL:          return "US";
         case FKEYS:              return "FN";
         default:                 return "UNKNOWN";
     }
@@ -134,12 +134,64 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                                                                                     KC_TRANSPARENT, KC_TRANSPARENT,
                                                                                     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_WWW_BACK
   ),
+  [DE_NORMAL] = LAYOUT_ergodox_pretty(
+    // Number row
+    KC_ESC,
+    KC_1, KC_2, KC_3, KC_4, KC_5, KC_6,
+    KC_7, KC_8, KC_9, KC_0, KC_MINS, KC_EQL, KC_BSPC,
+
+    // QWERTY row
+    KC_TAB,
+    KC_Q, KC_W, KC_E, KC_R, KC_T, KC_LBRC,
+    KC_RBRC, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLS,
+
+    // Home row
+    KC_CAPS,
+    KC_A, KC_S, KC_D, KC_F, KC_G,
+    KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT,
+
+    // Shift row
+    KC_LSFT,
+    KC_Z, KC_X, KC_C, KC_V, KC_B, KC_NO,
+    KC_NO, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSFT,
+
+    // Bottom wing
+    KC_LGUI,
+    MO(FKEYS),
+    KC_LALT,
+    KC_LEFT,
+    KC_RIGHT,
+
+    KC_UP,
+    KC_DOWN,
+    KC_RALT,
+    MO(FKEYS),
+    KC_RGUI,
+
+    // Upper thumb keys
+    KC_APP,
+    KC_LGUI,
+    KC_RALT,
+    KC_RCTL,
+
+    // Inner thumb keys
+    KC_HOME,
+    KC_PGUP,
+
+    // Main thumb keys
+    THUMB_SPACE_LEFT,
+    MT(MOD_LCTL, KC_DEL),
+    KC_END,
+    KC_PGDN,
+    MT(MOD_RALT, KC_BSPC),
+    THUMB_SPACE_RIGHT
+  ),
   [FKEYS] = LAYOUT_ergodox_pretty(
     // F1-F12; bootloader is deliberately FN + top-left
     QK_BOOT,
     KC_F1,  KC_F2,  KC_F3,  KC_F4,  KC_F5,  KC_F6,
     KC_F7,  KC_F8,  KC_F9,  KC_F10, KC_F11, KC_F12,
-    KC_NO,
+    BASE_TOGGLE,
 
     // F13-F24
     KC_NO,
@@ -304,7 +356,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
               rgblight_reload_from_eeprom();
           }
       }
-    return false;
+      return false;
+    case BASE_TOGGLE:
+        if (record->event.pressed) {
+            layer_invert(DE_NORMAL);
+        }
+        return false;
   }
 
   return process_record_user_shifted(keycode, record);
@@ -439,17 +496,17 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         NEO2_LAYER_6
     );
 
-    update_status_leds(state, get_unicode_input_mode());
+    update_status_leds(state, default_layer_state);
 
 #ifdef CONSOLE_ENABLE
     uprintf("LAYER:%s\n", layer_name(get_highest_layer(state)));
 #endif
 
     return state;
-};
+}
 
 void keyboard_post_init_user(void) {
-  update_status_leds(layer_state, get_unicode_input_mode());
+  update_status_leds(layer_state, default_layer_state);
 }
 
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -525,20 +582,22 @@ static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record) {
 
 static void update_status_leds(
     layer_state_t state,
-    uint8_t unicode_mode
+    layer_state_t default_state
 ) {
-    uint8_t layer = get_highest_layer(state);
+    uint8_t layer = get_highest_layer(state | default_state);
 
     ergodox_board_led_off();
-    ergodox_right_led_1_off();
-    ergodox_right_led_2_off();
-    ergodox_right_led_3_off();
+    ergodox_right_led_1_off();  // red
+    ergodox_right_led_2_off();  // blue
+    ergodox_right_led_3_off();  // green
 
     switch (layer) {
         case NEO2_LAYER_1_AND_2:
-            if (unicode_mode == UNICODE_MODE_LINUX) {
+            if (get_unicode_input_mode() == UNICODE_MODE_LINUX) {
                 ergodox_right_led_3_on();  // green
-            } else if (unicode_mode == UNICODE_MODE_WINCOMPOSE) {
+            } else if (
+                get_unicode_input_mode() == UNICODE_MODE_WINCOMPOSE
+            ) {
                 ergodox_right_led_1_on();  // red
             }
             break;
@@ -556,18 +615,18 @@ static void update_status_leds(
             break;
 
         case NEO2_LAYER_6:
-            ergodox_right_led_1_on();      // red + blue
-            ergodox_right_led_2_on();
+            ergodox_right_led_1_on();      // red
+            ergodox_right_led_3_on();      // green
             break;
 
         case DE_NORMAL:
-            ergodox_right_led_1_on();      // red + green
-            ergodox_right_led_3_on();
+            ergodox_right_led_1_on();      // red
+            ergodox_right_led_2_on();      // blue
             break;
 
         case FKEYS:
-            ergodox_right_led_2_on();      // blue + green
-            ergodox_right_led_3_on();
+            ergodox_right_led_2_on();      // blue
+            ergodox_right_led_3_on();      // green
             break;
     }
 }

@@ -19,6 +19,7 @@ enum custom_keycodes {
   MAGIC_SPACE_RIGHT,
 
   DISCO_TOGGLE,
+  BASE_TOGGLE,
 
   HSV_172_255_255,
   HSV_86_255_128,
