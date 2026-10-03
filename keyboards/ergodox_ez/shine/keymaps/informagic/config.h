@@ -18,3 +18,8 @@
 #define UNICODE_KEY_LNX  LCTL(LSFT(KC_U))
 
 #define USER_PRINT
+
+#ifdef DEBOUNCE
+#    undef DEBOUNCE
+#endif
+#define DEBOUNCE 12

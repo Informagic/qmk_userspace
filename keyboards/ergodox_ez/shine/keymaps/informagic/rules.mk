@@ -9,5 +9,6 @@ LTO_ENABLE = yes
 UNICODE_ENABLE = no
 UNICODEMAP_ENABLE = yes
 MOUSEKEY_ENABLE = yes
+DEBOUNCE_TYPE = sym_defer_pk
 
 SRC += disco.c
