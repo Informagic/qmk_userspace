@@ -19,8 +19,9 @@ static const char *layer_name(uint8_t layer) {
 
 static bool process_long_thumb_enter(uint16_t keycode, keyrecord_t *record);
 static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record);
+static void update_status_leds(layer_state_t state, uint8_t unicode_mode);
 
-#define Ä 200
+#define THUMB_REPEAT_TERM 200
 
 static uint16_t left_thumb_last_tap  = 0;
 static uint16_t right_thumb_last_tap = 0;
@@ -67,7 +68,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * ,--------------------------------------------------.           ,--------------------------------------------------.
  * | Esc    |   1  |   2  |   3  |   4  |   5  | ́ /c  |           | ̀ /̃   |   6  |   7  |   8  |   9  |   0  |   -/—  |
  * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
- * | ̂ /c    |   X  |   V  |   L  |   C  |   W  |  L1  |           |  L1  |   Y  |   U  |   I  |   O  |   P  |   \    |
+ * | ̂ /c    |   X  |   V  |   L  |   C  |   W  |  L4  |           |  L4  |   Y  |   U  |   I  |   O  |   P  |   \    |
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
  * | Tab    |   A  |   S  |   D  |   F  |   G  |------|           |------|   H  |   J  |   K  |   L  |; / L2|' / Cmd |
  * |--------+------+------+------+------+------| Hyper|           | Meh  |------+------+------+------+------+--------|
@@ -84,11 +85,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                                 `--------------------'       `----------------------'
  */
   [NEO2_LAYER_1_AND_2] = LAYOUT_ergodox_pretty(
-    KC_ESCAPE,              NEO2_1,         NEO2_2,         NEO2_3,         NEO2_4,         NEO2_5,         NEO2_ACUTE_CEDILLA,                             NEO2_GRAVE_TILDE,   NEO2_6,         NEO2_7,         NEO2_8,         NEO2_9,         NEO2_0,         NEO2_MINUS,
-    NEO2_CIRCUMFLEX_CARON,  KC_X,           KC_V,           KC_L,           KC_C,           KC_W,           KC_TRANSPARENT,                                 KC_TRANSPARENT,     KC_K,           KC_H,           KC_G,           KC_F,           KC_Q,           NEO2_SS,
-    KC_TAB,                 KC_U,           KC_I,           KC_A,           KC_E,           KC_O,                                                                               KC_S,           KC_N,           KC_R,           KC_T,           KC_D,           KC_Y,
-    MO(NEO2_LAYER_3),                  NEO2_UE,        NEO2_OE,        NEO2_AE,        KC_P,           KC_Z,           KC_HYPR,                                        KC_MEH,             KC_B,           KC_M,           NEO2_COMMA,     NEO2_DOT,       KC_J,           MO(NEO2_LAYER_3),
-    KC_LEFT_GUI,            KC_TRANSPARENT, KC_TRANSPARENT, KC_UP,          KC_DOWN,                                                                                                            KC_LEFT,        KC_RIGHT,       KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
+    KC_ESCAPE,              NEO2_1,         NEO2_2,         NEO2_3,         NEO2_4,         NEO2_5,         NEO2_ACUTE_CEDILLA,                             NEO2_GRAVE_TILDE,   NEO2_6,         NEO2_7,         NEO2_8,         NEO2_9,             NEO2_0,        NEO2_MINUS,
+    NEO2_CIRCUMFLEX_CARON,  KC_X,           KC_V,           KC_L,           KC_C,           KC_W,           MO(NEO2_LAYER_4),                               MO(NEO2_LAYER_4),   KC_K,           KC_H,           KC_G,           KC_F,               KC_Q,          NEO2_SS,
+    KC_TAB,                 KC_U,           KC_I,           KC_A,           KC_E,           KC_O,                                                                                       KC_S,           KC_N,           KC_R,       KC_T,           KC_D,          KC_Y,
+    MO(NEO2_LAYER_3),       NEO2_UE,        NEO2_OE,        NEO2_AE,        KC_P,           KC_Z,           KC_HYPR,                                        KC_MEH,             KC_B,           KC_M,           NEO2_COMMA,     NEO2_DOT,           KC_J,          MO(NEO2_LAYER_3),
+    KC_LEFT_GUI,            MO(FKEYS),      KC_TRANSPARENT, KC_UP,          KC_DOWN,                                                                                                                            KC_LEFT,        KC_RIGHT,   KC_TRANSPARENT, MO(FKEYS), KC_TRANSPARENT,
                                                                                                     KC_TRANSPARENT,             DISCO_TOGGLE,   LAG(KC_EQUAL), LAG(KC_MINUS),
                                                                                                                                 KC_HOME,        KC_PAGE_UP,
                                                                             THUMB_SPACE_LEFT, MT(MOD_LCTL, KC_DELETE),    KC_END,         KC_PGDN,       MT(MOD_RALT, KC_BSPC), THUMB_SPACE_RIGHT
@@ -98,7 +99,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_TRANSPARENT, NEO2_L3_ELLIPSIS, KC_UNDS,        KC_LBRC,        KC_RBRC,        KC_CIRC,        KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_EXLM,        KC_LABK,        KC_RABK,        KC_EQUAL,       KC_AMPR,        KC_TRANSPARENT,
     KC_TRANSPARENT, KC_BSLS,        KC_SLASH,       KC_LCBR,        KC_RCBR,        KC_ASTR,                                                                        KC_QUES,        KC_LPRN,        KC_RPRN,        KC_MINUS,       KC_COLN,        KC_AT,
     KC_TRANSPARENT, KC_HASH,        KC_DLR,         KC_PIPE,        KC_TILD,        KC_GRAVE,       KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_PLUS,        KC_PERC,        KC_DQUO,        KC_QUOTE,       KC_SCLN,        KC_TRANSPARENT,
-    KC_TRANSPARENT, MS_WHLU, MS_WHLD, MS_UP, MS_DOWN,                                                                                                 MS_LEFT, MS_RGHT, MS_BTN1, MS_BTN2, KC_TRANSPARENT,
+    KC_TRANSPARENT, KC_TRANSPARENT, MS_WHLD, MS_UP, MS_DOWN,                                                                                                 MS_LEFT, MS_RGHT, MS_BTN1, KC_TRANSPARENT, KC_TRANSPARENT,
                                                                                                     KC_TRANSPARENT, HSV_172_255_255,LAG(KC_8), KC_TRANSPARENT,
                                                                                                                     HSV_86_255_128, KC_TRANSPARENT,
                                                                                     S(KC_ENT),        UG_VALD,        UG_VALU, KC_TRANSPARENT, UG_HUEU, S(KC_ENT)
@@ -133,6 +134,69 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                                                                                     KC_TRANSPARENT, KC_TRANSPARENT,
                                                                                     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_WWW_BACK
   ),
+  [FKEYS] = LAYOUT_ergodox_pretty(
+    // F1-F12; bootloader is deliberately FN + top-left
+    QK_BOOT,
+    KC_F1,  KC_F2,  KC_F3,  KC_F4,  KC_F5,  KC_F6,
+    KC_F7,  KC_F8,  KC_F9,  KC_F10, KC_F11, KC_F12,
+    KC_NO,
+
+    // F13-F24
+    KC_NO,
+    KC_F13, KC_F14, KC_F15, KC_F16, KC_F17, KC_F18,
+    KC_F19, KC_F20, KC_F21, KC_F22, KC_F23, KC_F24,
+    KC_NO,
+
+    // Central pair: Linux and Windows/WinCompose
+    KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, UC_LINX,
+    UC_WINC, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
+
+    // Underglow/Disco on the left; media on the right
+    KC_TRANSPARENT,
+    UG_TOGG,
+    UG_VALD,
+    UG_VALU,
+    UG_HUED,
+    UG_HUEU,
+    DISCO_TOGGLE,
+
+    KC_MEDIA_PREV_TRACK,
+    KC_MEDIA_PLAY_PAUSE,
+    KC_MEDIA_NEXT_TRACK,
+    KC_AUDIO_VOL_DOWN,
+    KC_AUDIO_MUTE,
+    KC_AUDIO_VOL_UP,
+    KC_TRANSPARENT,
+
+    // Bottom wing: FN keys must be transparent
+    KC_NO,
+    KC_TRANSPARENT,
+    KC_NO,
+    KC_NO,
+    KC_NO,
+
+    KC_NO,
+    KC_NO,
+    KC_NO,
+    KC_TRANSPARENT,
+    KC_NO,
+
+    // Preserve thumb-cluster keys and modifiers
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT,
+    KC_TRANSPARENT
+    )
 };
 
 const uint16_t PROGMEM combo0[] = {
@@ -368,41 +432,14 @@ bool process_record_user_shifted(uint16_t keycode, keyrecord_t *record) {
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
-    uint8_t layer = get_highest_layer(state);
-    ergodox_board_led_off();
-    ergodox_right_led_1_off();
-    ergodox_right_led_2_off();
-    ergodox_right_led_3_off();
-    switch (layer) {
-      case 1:
-        ergodox_right_led_1_on();
-        break;
-      case 2:
-        ergodox_right_led_2_on();
-        break;
-      case 3:
-        ergodox_right_led_3_on();
-        break;
-      case 4:
-        ergodox_right_led_1_on();
-        ergodox_right_led_2_on();
-        break;
-      case 5:
-        ergodox_right_led_1_on();
-        ergodox_right_led_3_on();
-        break;
-      case 6:
-        ergodox_right_led_2_on();
-        ergodox_right_led_3_on();
-        break;
-      case 7:
-        ergodox_right_led_1_on();
-        ergodox_right_led_2_on();
-        ergodox_right_led_3_on();
-        break;
-      default:
-        break;
-    }
+    state = update_tri_layer_state(
+        state,
+        NEO2_LAYER_3,
+        NEO2_LAYER_4,
+        NEO2_LAYER_6
+    );
+
+    update_status_leds(state, get_unicode_input_mode());
 
 #ifdef CONSOLE_ENABLE
     uprintf("LAYER:%s\n", layer_name(get_highest_layer(state)));
@@ -412,7 +449,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 };
 
 void keyboard_post_init_user(void) {
-  layer_state_set_user(layer_state);
+  update_status_leds(layer_state, get_unicode_input_mode());
 }
 
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -425,6 +462,10 @@ void matrix_init_user(void) {
 
 void matrix_scan_user(void) {
     decrease_brightness();
+}
+
+void unicode_input_mode_set_user(uint8_t input_mode) {
+    update_status_leds(layer_state, input_mode);
 }
 
 static bool process_long_thumb_enter(uint16_t keycode, keyrecord_t *record) {
@@ -478,6 +519,55 @@ static void arm_thumb_space_repeat(uint16_t keycode, keyrecord_t *record) {
         case THUMB_SPACE_RIGHT:
             right_thumb_last_tap     = timer_read();
             right_thumb_repeat_armed = true;
+            break;
+    }
+}
+
+static void update_status_leds(
+    layer_state_t state,
+    uint8_t unicode_mode
+) {
+    uint8_t layer = get_highest_layer(state);
+
+    ergodox_board_led_off();
+    ergodox_right_led_1_off();
+    ergodox_right_led_2_off();
+    ergodox_right_led_3_off();
+
+    switch (layer) {
+        case NEO2_LAYER_1_AND_2:
+            if (unicode_mode == UNICODE_MODE_LINUX) {
+                ergodox_right_led_3_on();  // green
+            } else if (unicode_mode == UNICODE_MODE_WINCOMPOSE) {
+                ergodox_right_led_1_on();  // red
+            }
+            break;
+
+        case NEO2_LAYER_3:
+            ergodox_right_led_1_on();      // red
+            break;
+
+        case NEO2_LAYER_4:
+            ergodox_right_led_2_on();      // blue
+            break;
+
+        case NEO2_LAYER_5:
+            ergodox_right_led_3_on();      // green
+            break;
+
+        case NEO2_LAYER_6:
+            ergodox_right_led_1_on();      // red + blue
+            ergodox_right_led_2_on();
+            break;
+
+        case DE_NORMAL:
+            ergodox_right_led_1_on();      // red + green
+            ergodox_right_led_3_on();
+            break;
+
+        case FKEYS:
+            ergodox_right_led_2_on();      // blue + green
+            ergodox_right_led_3_on();
             break;
     }
 }
