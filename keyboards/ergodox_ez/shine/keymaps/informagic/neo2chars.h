@@ -51,6 +51,7 @@ enum unicode_names {
 #define NEO2_L4_CURRENCY_SIGN        UC(0x00A4)                  // ¤
 #define NEO2_L4_INV_EXCLAMATION      UC(0x00A1)                  // ¡
 #define NEO2_L4_INV_QUESTIONMARK     UC(0x00BF)                  // ¿
+#define NEO2_L4_EN_DASH              UC(0x2013)                  // –
 
 #if(0)
 // NEO_1_AND_2 special characters
